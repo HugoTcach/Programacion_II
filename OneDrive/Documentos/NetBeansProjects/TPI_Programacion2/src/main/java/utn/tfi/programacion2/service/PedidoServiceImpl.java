@@ -2,6 +2,7 @@
 package utn.tfi.programacion2.service;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import utn.tfi.programacion2.config.DatabaseConnection;
 import utn.tfi.programacion2.dao.EnvioDao;
@@ -13,14 +14,15 @@ import utn.tfi.programacion2.entities.Pedido;
 
 /*
  * Implementación de la capa de negocio para la entidad Pedido.
-
  * Aplica reglas de negocio, validaciones y maneja transacciones.
  * 
  * - Utiliza DAOs (PedidoDao y EnvioDao) para interactuar con la base de datos.
- * - Contiene lógica para crear un pedido completo (Pedido + Envío) dentro de una transacción.
+ * - Contiene lógica para crear un pedido completo (Pedido + Envío)
+ *   dentro de una transacción.
  */
 
 public class PedidoServiceImpl implements PedidoService {
+
     private final PedidoDao pedidoDao;
     private final EnvioDao envioDao;
 
@@ -29,15 +31,15 @@ public class PedidoServiceImpl implements PedidoService {
         this.pedidoDao = new PedidoDaoImpl();
         this.envioDao = new EnvioDaoImpl();
     }
-    
+
     // Guarda y valida un nuevo pedido.
     @Override
     public void save(Pedido pedido) throws Exception {
         validarPedido(pedido);
         pedidoDao.save(pedido);
     }
-    
-    //Busca un pedido por su ID.
+
+    // Busca un pedido por su ID.
     @Override
     public Pedido findById(Long id) throws Exception {
         return pedidoDao.findById(id);
@@ -55,7 +57,7 @@ public class PedidoServiceImpl implements PedidoService {
         validarPedido(pedido);
         pedidoDao.update(pedido);
     }
-    
+
     // Elimina un pedido según su ID.
     @Override
     public void delete(Long id) throws Exception {
@@ -77,7 +79,7 @@ public class PedidoServiceImpl implements PedidoService {
      * Crea un Pedido completo con su Envío asociado dentro de una transacción.
      * ------------------------------------------------------------------------
      * - Usa la misma conexión para ambos DAOs.
-     * - Si alguno de los insert falla, se hace rollback (se deshacen los cambios).
+     * - Si alguno de los insert falla, se hace rollback.
      * - Si todo va bien, se hace commit.
      */
     @Override
@@ -86,33 +88,54 @@ public class PedidoServiceImpl implements PedidoService {
         validarEnvio(pedido.getEnvio());
 
         Connection conn = null;
+
         try {
             // 1) Obtener conexión y desactivar autoCommit
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
 
-            // 2) Guardar primero el envío (tiene relación con el pedido)
+            // 2) Guardar primero el Envío
             envioDao.saveTx(pedido.getEnvio(), conn);
 
-            // ️3) Asociar el envío al pedido antes de guardarlo
+            // 3) Asociar el Envío al Pedido
             pedido.setEnvio(pedido.getEnvio());
 
-            // 4) Guardar el pedido con la misma conexión
+            // 4) Guardar el Pedido con la misma conexión
             pedidoDao.saveTx(pedido, conn);
 
-            // 5) Confirmar la transacción si todo salió bien
+            // 5) Confirmar la transacción
             conn.commit();
-            
+            System.out.println("Transacción completada correctamente: Pedido y Envío creados.");
+
         } catch (Exception e) {
-            // 6) Si hay error, deshacer los cambios
-            if (conn != null) conn.rollback();
-            throw new Exception("Error al crear pedido completo: " + e.getMessage(), e);
-            
-            // 7) Se restaural al estado original de la conexión
-        } finally {
+
+            // Si ocurre un error, se revierte todo
             if (conn != null) {
-                conn.setAutoCommit(true);
-                conn.close();
+                try {
+                    conn.rollback();
+                    System.err.println("Transacción revertida por error: " + e.getMessage());
+                } catch (SQLException rollbackEx) {
+                    System.err.println("Error al ejecutar rollback: " + rollbackEx.getMessage());
+                }
+            }
+
+            throw new Exception("Error al crear pedido completo: " + e.getMessage(), e);
+
+        } finally {
+
+            // Restaurar autocommit y cerrar conexión
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException acEx) {
+                    System.err.println("Error restaurando autoCommit: " + acEx.getMessage());
+                }
+
+                try {
+                    conn.close();
+                } catch (SQLException closeEx) {
+                    System.err.println("Error cerrando la conexión: " + closeEx.getMessage());
+                }
             }
         }
     }
@@ -138,6 +161,4 @@ public class PedidoServiceImpl implements PedidoService {
         if (envio.getTracking() == null || envio.getTracking().isEmpty())
             throw new Exception("El tracking del envío es obligatorio.");
     }
-    
-
 }

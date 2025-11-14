@@ -20,7 +20,6 @@ public class MenuHandler {
     public MenuHandler(Scanner scanner,
                        PedidoServiceImpl pedidoService,
                        EnvioServiceImpl envioService) {
-
         this.scanner = scanner;
         this.pedidoService = pedidoService;
         this.envioService = envioService;
@@ -31,7 +30,7 @@ public class MenuHandler {
     // ============================================================
 
     public void gestionarPedidos() {
-        int opcion = -1;
+        int opcion;
         do {
             MenuDisplay.mostrarSubMenu("Pedidos");
             opcion = leerEntero();
@@ -43,6 +42,7 @@ public class MenuHandler {
                 case 4 -> actualizarPedido();
                 case 5 -> eliminarPedido();
                 case 6 -> buscarPedidoPorNumero();
+                case 7 -> crearPedidoCompletoTx();
                 case 0 -> {}
                 default -> System.out.println("Opción inválida.");
             }
@@ -58,12 +58,10 @@ public class MenuHandler {
             String cliente = leerString("Cliente: ");
             double total = leerDouble("Total: ");
 
-            Pedido.EstadoPedido estado =
-                    leerEnum(Pedido.EstadoPedido.class, "Estado");
+            Pedido.EstadoPedido estado = leerEnum(Pedido.EstadoPedido.class, "Estado");
 
             Pedido pedido = new Pedido(null, false, numero, fecha, cliente, total, estado, null);
 
-            // Asociar envío
             Envio envio = gestionarAsociacionEnvio(null);
             pedido.setEnvio(envio);
 
@@ -82,6 +80,7 @@ public class MenuHandler {
 
             if (p != null) System.out.println(p);
             else System.out.println("No se encontró.");
+
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -89,8 +88,7 @@ public class MenuHandler {
 
     private void listarPedidos() {
         try {
-            List<Pedido> pedidos = pedidoService.findAll();
-            pedidos.forEach(System.out::println);
+            pedidoService.findAll().forEach(System.out::println);
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
@@ -121,7 +119,6 @@ public class MenuHandler {
                     leerEnumOptional(Pedido.EstadoPedido.class, "Estado [" + pedido.getEstado() + "]");
             if (estado != null) pedido.setEstado(estado);
 
-            // envío
             pedido.setEnvio(gestionarAsociacionEnvio(pedido.getEnvio()));
 
             pedidoService.update(pedido);
@@ -156,12 +153,48 @@ public class MenuHandler {
     }
 
     // ============================================================
+    //   CREAR PEDIDO COMPLETO (Transacción Pedido + Envío)
+    // ============================================================
+
+    private void crearPedidoCompletoTx() {
+        try {
+            System.out.println("\n--- Crear Pedido COMPLETO (con Transacción) ---");
+
+            String numero = leerString("Número: ");
+            LocalDate fecha = leerFecha("Fecha (YYYY-MM-DD)");
+            String cliente = leerString("Cliente: ");
+            double total = leerDouble("Total: ");
+            Pedido.EstadoPedido estado = leerEnum(Pedido.EstadoPedido.class, "Estado");
+
+            Pedido pedido = new Pedido(null, false, numero, fecha, cliente, total, estado, null);
+
+            System.out.println("\n--- Datos del Envío ---");
+            String tracking = leerString("Tracking: ");
+            Envio.Empresa empresa = leerEnum(Envio.Empresa.class, "Empresa");
+            Envio.Tipo tipo = leerEnum(Envio.Tipo.class, "Tipo");
+            double costo = leerDouble("Costo: ");
+            LocalDate despacho = leerFecha("Fecha despacho");
+            LocalDate estimada = leerFecha("Fecha estimada");
+            Envio.EstadoEnvio estadoEnvio = leerEnum(Envio.EstadoEnvio.class, "Estado");
+
+            Envio envio = new Envio(null, false, tracking, empresa, tipo, costo, despacho, estimada, estadoEnvio);
+            pedido.setEnvio(envio);
+
+            pedidoService.crearPedidoCompleto(pedido);
+
+            System.out.println("Pedido completo creado con éxito.");
+
+        } catch (Exception e) {
+            System.out.println("ERROR: " + e.getMessage());
+        }
+    }
+
+    // ============================================================
     //                       ENVÍOS
     // ============================================================
 
     public void gestionarEnvios() {
-        int opcion = -1;
-
+        int opcion;
         do {
             MenuDisplay.mostrarSubMenu("Envios");
             opcion = leerEntero();
@@ -209,6 +242,7 @@ public class MenuHandler {
 
             if (e != null) System.out.println(e);
             else System.out.println("No encontrado.");
+
         } catch (Exception e) {
             System.out.println(e.getMessage());
         }
@@ -273,9 +307,8 @@ public class MenuHandler {
         }
     }
 
-
     // ============================================================
-    //            GESTIÓN ASOCIACIÓN PEDIDO ↔ ENVÍO
+    //      GESTIÓN ASOCIACIÓN PEDIDO ↔ ENVÍO
     // ============================================================
 
     private Envio gestionarAsociacionEnvio(Envio actual) throws Exception {
@@ -285,6 +318,7 @@ public class MenuHandler {
         System.out.println("1. Asociar/Cambiar envío");
         System.out.println("2. Quitar envío");
         System.out.println("0. Mantener");
+
         int op = leerEntero();
 
         return switch (op) {
@@ -320,7 +354,7 @@ public class MenuHandler {
         while (true) {
             try {
                 return Integer.parseInt(scanner.nextLine());
-            } catch (Exception e) {
+            } catch (NumberFormatException e) {
                 System.out.println("Número inválido.");
             }
         }
@@ -330,8 +364,8 @@ public class MenuHandler {
         System.out.print(msg);
         while (true) {
             try {
-                return Long.parseLong(scanner.nextLine());
-            } catch (Exception e) {
+                return Long.valueOf(scanner.nextLine());
+            } catch (NumberFormatException e) {
                 System.out.println("ID inválido.");
             }
         }
@@ -342,7 +376,7 @@ public class MenuHandler {
         while (true) {
             try {
                 return Double.parseDouble(scanner.nextLine());
-            } catch (Exception e) {
+            } catch (NumberFormatException e) {
                 System.out.println("Número inválido.");
             }
         }
@@ -355,7 +389,7 @@ public class MenuHandler {
             if (in.isEmpty())
                 return -1;
             return Double.parseDouble(in);
-        } catch (Exception e) {
+        } catch (NumberFormatException e) {
             return -1;
         }
     }
