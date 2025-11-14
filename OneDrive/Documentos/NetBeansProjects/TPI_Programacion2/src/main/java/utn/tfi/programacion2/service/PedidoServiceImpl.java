@@ -2,6 +2,7 @@
 package utn.tfi.programacion2.service;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import utn.tfi.programacion2.config.DatabaseConnection;
 import utn.tfi.programacion2.dao.EnvioDao;
@@ -102,20 +103,39 @@ public class PedidoServiceImpl implements PedidoService {
 
             // 5) Confirmar la transacción si todo salió bien
             conn.commit();
+            System.out.println("Transacción completada correctamente: Pedido y Envío creados.");
             
         } catch (Exception e) {
-            // 6) Si hay error, deshacer los cambios
-            if (conn != null) conn.rollback();
+        // Si ocurre un error, se revierten los cambios
+        if (conn != null) {
+            try {
+                conn.rollback();
+                System.err.println("Transacción revertida por error: " + e.getMessage());
+            } catch (SQLException rollbackEx) {
+                System.err.println("Error al ejecutar rollback: " + rollbackEx.getMessage());
+            }
+        }
+
+        // Relanzar la excepción para que la capa superior la maneje (AppMenu)
             throw new Exception("Error al crear pedido completo: " + e.getMessage(), e);
-            
-            // 7) Se restaural al estado original de la conexión
+
         } finally {
+            // Restaurar autoCommit y cerrar la conexión de forma segura
             if (conn != null) {
+                try {
                 conn.setAutoCommit(true);
+                } catch (SQLException acEx) {
+                System.err.println("Error restaurando autoCommit: " + acEx.getMessage());
+                }
+
+                try {
                 conn.close();
+                } catch (SQLException closeEx) {
+                System.err.println("Error cerrando la conexión: " + closeEx.getMessage());
             }
         }
     }
+}
 
     /*
      * Valida los datos del pedido antes de guardarlo o actualizarlo.
