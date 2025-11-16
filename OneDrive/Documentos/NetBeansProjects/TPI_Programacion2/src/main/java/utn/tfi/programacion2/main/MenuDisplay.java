@@ -7,7 +7,7 @@ public class MenuDisplay {
         System.out.println("1. Gestionar Pedidos");
         System.out.println("2. Gestionar Envios");
         System.out.println("0. Salir");
-        System.out.print("Ingrese una opción: ");
+        System.out.print("Ingrese una opcion: ");
     }
 
     public static void mostrarSubMenu(String titulo) {
@@ -18,15 +18,15 @@ public class MenuDisplay {
         System.out.println("2. Buscar por ID");
         System.out.println("3. Listar");
         System.out.println("4. Actualizar");
-        System.out.println("5. Eliminar (baja lógica)");
-        System.out.println("6. Buscar por campo único");
+        System.out.println("5. Eliminar (baja logica)");
+        System.out.println("6. Buscar por campo unico");
 
-        // Solo para el menú de Pedidos
+        // Solo para el menu de Pedidos
         if (tituloNormalizado.equals("pedidos")) {
-            System.out.println("7. Crear Pedido Completo (Transacción)");
+            System.out.println("7. Crear Pedido Completo (Transaccion)");
         }
 
         System.out.println("0. Volver");
-        System.out.print("Ingrese una opción: ");
+        System.out.print("Ingrese una opcion: ");
     }
 }

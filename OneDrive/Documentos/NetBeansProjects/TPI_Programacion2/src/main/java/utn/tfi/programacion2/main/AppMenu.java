@@ -17,7 +17,7 @@ public class AppMenu {
         PedidoServiceImpl pedidoService = new PedidoServiceImpl();
         EnvioServiceImpl envioService = new EnvioServiceImpl();
 
-        // Inyección en el handler
+        // Inyeccion en el handler
         this.handler = new MenuHandler(scanner, pedidoService, envioService);
 
         this.running = true;
@@ -30,7 +30,7 @@ public class AppMenu {
                 int opcion = Integer.parseInt(scanner.nextLine());
                 processOption(opcion);
             } catch (NumberFormatException e) {
-                System.out.println("Entrada inválida. Ingrese un número.");
+                System.out.println("Entrada invalida. Ingrese un numero.");
             }
         }
         scanner.close();
@@ -44,7 +44,7 @@ public class AppMenu {
                 System.out.println("Saliendo...");
                 running = false;
             }
-            default -> System.out.println("Opción no válida.");
+            default -> System.out.println("Opcion no valida.");
         }
     }
 }
